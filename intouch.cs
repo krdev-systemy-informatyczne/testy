@@ -15,9 +15,6 @@ public void FixMissingStylesForText(WordprocessingDocument doc)
     }
 
     var styles = stylePart.Styles;
-    var existingStyleIds = styles.Elements<Style>()
-        .Select(s => s.StyleId)
-        .ToHashSet();
 
     // --- Dodanie brakujących stylów lub poprawienie istniejących ---
     foreach (var expected in expectedStyle)
@@ -44,6 +41,18 @@ public void FixMissingStylesForText(WordprocessingDocument doc)
 
             // Usuń UnhideWhenUsed
             existing.RemoveAllChildren<UnhideWhenUsed>();
+
+            // UWAGA: czasem trzeba też podnieść UI priority, żeby Word pokazywał ten styl "wyżej"
+            // Jeżeli masz PrimaryStyle, warto UI priority dać niskie (np. 1 lub 99)
+            var uiPriority = existing.Elements<UIPriority>().FirstOrDefault();
+            if (uiPriority == null)
+            {
+                existing.Append(new UIPriority() { Val = 1 });
+            }
+            else
+            {
+                uiPriority.Val = 1;
+            }
         }
     }
 
