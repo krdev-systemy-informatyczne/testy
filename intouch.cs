@@ -1,25 +1,33 @@
-
-// Ukryj pozostałe style
-    foreach (var style in styles.Elements<Style>())
+foreach (var style in styles.Elements<Style>())
+{
+    if (!expectedStyle.Select(s => s.StyleId).Contains(style.StyleId))
     {
-        if (!expectedStyle.Select(s => s.StyleId).Contains(style.StyleId))
-        {
-            // Dodaj jeśli nie istnieje — nie zawsze style mają te elementy
-            if (style.Elements<SemiHidden>().FirstOrDefault() == null)
-                style.AppendChild(new SemiHidden());
+        // Ukrywamy style, które nie są oczekiwane
 
-            if (style.Elements<UnhideWhenUsed>().FirstOrDefault() == null)
-                style.AppendChild(new UnhideWhenUsed());
+        if (style.Elements<SemiHidden>().FirstOrDefault() == null)
+            style.AppendChild(new SemiHidden());
 
-            style.StyleUiPriority = new StyleUiPriority() { Val = 99 };
-        }
+        if (style.Elements<UnhideWhenUsed>().FirstOrDefault() == null)
+            style.AppendChild(new UnhideWhenUsed());
+
+        if (style.Elements<UiPriority>().FirstOrDefault() == null)
+            style.AppendChild(new UiPriority() { Val = 99 });
         else
-        {
-            // Jeśli styl jest na liście oczekiwanych — upewnij się że NIE jest ukryty
-            var semiHidden = style.Elements<SemiHidden>().FirstOrDefault();
-            if (semiHidden != null)
-                semiHidden.Remove();
-        }
+            style.Elements<UiPriority>().First().Val = 99;
     }
+    else
+    {
+        // Jeśli styl jest oczekiwany — odblokuj
+        var semiHidden = style.Elements<SemiHidden>().FirstOrDefault();
+        if (semiHidden != null)
+            semiHidden.Remove();
 
-    styles.Save();
+        var unhideWhenUsed = style.Elements<UnhideWhenUsed>().FirstOrDefault();
+        if (unhideWhenUsed != null)
+            unhideWhenUsed.Remove();
+
+        var uiPriority = style.Elements<UiPriority>().FirstOrDefault();
+        if (uiPriority != null)
+            uiPriority.Val = 1;  // np. 1 dla oczekiwanych stylów — będzie wysoko w UI
+    }
+}
