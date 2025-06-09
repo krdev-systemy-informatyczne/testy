@@ -1,6 +1,6 @@
 public void FixMissingStylesForText(WordprocessingDocument doc)
 {
-    var expectedStyle = GuidebookQualitySettings.GetStylesForText();
+    var expectedStyles = GuidebookQualitySettings.GetStylesForText();
     var mainPart = doc.MainDocumentPart ?? throw new InvalidOperationException("Brak głównej części dokumentu");
 
     var stylePart = mainPart.StyleDefinitionsPart;
@@ -16,22 +16,24 @@ public void FixMissingStylesForText(WordprocessingDocument doc)
 
     var styles = stylePart.Styles;
 
-    // --- Dodanie brakujących stylów lub poprawienie istniejących ---
-    foreach (var expected in expectedStyle)
+    // Dodanie brakujących stylów lub poprawienie istniejących
+    foreach (var expected in expectedStyles)
     {
         var existing = styles.Elements<Style>().FirstOrDefault(s => s.StyleId == expected.StyleId);
 
         if (existing == null)
         {
-            // Brak — dodaj styl
             styles.AppendChild(expected);
         }
         else
         {
-            // Styl istnieje — odsłoń go
+            // Styl istnieje - uczyń go widocznym
 
             // Usuń SemiHidden
             existing.RemoveAllChildren<SemiHidden>();
+
+            // Usuń UnhideWhenUsed
+            existing.RemoveAllChildren<UnhideWhenUsed>();
 
             // Dodaj PrimaryStyle jeśli brak
             if (existing.Elements<PrimaryStyle>().FirstOrDefault() == null)
@@ -39,11 +41,7 @@ public void FixMissingStylesForText(WordprocessingDocument doc)
                 existing.Append(new PrimaryStyle());
             }
 
-            // Usuń UnhideWhenUsed
-            existing.RemoveAllChildren<UnhideWhenUsed>();
-
-            // UWAGA: czasem trzeba też podnieść UI priority, żeby Word pokazywał ten styl "wyżej"
-            // Jeżeli masz PrimaryStyle, warto UI priority dać niskie (np. 1 lub 99)
+            // Ustaw niskie UI Priority (im niższe, tym wyżej na pasku, np. 1)
             var uiPriority = existing.Elements<UIPriority>().FirstOrDefault();
             if (uiPriority == null)
             {
@@ -56,10 +54,10 @@ public void FixMissingStylesForText(WordprocessingDocument doc)
         }
     }
 
-    // --- Ukrycie wszystkich innych stylów ---
+    // Ukrycie WSZYSTKICH INNYCH stylów
     foreach (var style in styles.Elements<Style>())
     {
-        bool isExpected = expectedStyle.Any(s => s.StyleId == style.StyleId);
+        bool isExpected = expectedStyles.Any(s => s.StyleId == style.StyleId);
 
         if (!isExpected)
         {
@@ -74,6 +72,17 @@ public void FixMissingStylesForText(WordprocessingDocument doc)
 
             // Usuń UnhideWhenUsed
             style.RemoveAllChildren<UnhideWhenUsed>();
+
+            // Opcjonalnie podnieś UI priority żeby był niżej
+            var uiPriority = style.Elements<UIPriority>().FirstOrDefault();
+            if (uiPriority == null)
+            {
+                style.Append(new UIPriority() { Val = 99 });
+            }
+            else
+            {
+                uiPriority.Val = 99;
+            }
         }
     }
 
